@@ -1,0 +1,542 @@
+---
+title: "Week 3 - Graphics"
+author: "Nicholas Kortessis"
+date: "January 29th, 2025"
+output:
+  pdf_document:
+    fig_height: 7
+    fig_width: 7
+  html_document:
+    df_print: paged
+---
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+library(knitr)
+# Set so that long lines in R will be wrapped:
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+opts_knit$set(root.dir = '/Users/nicholaskortessis/Library/CloudStorage/GoogleDrive-kortessn@wfu.edu/My Drive/Import/Wake Forest/Teaching/24-25/2025 - Spring/BIO 380/Lab/Wk3')
+```
+
+# Graphics in R
+
+In this module, we will explore some of the graphic capabilities with R's 'base' graphics. There are several R packages focused on graphics, such as 'lattice' and 'ggplot2'. I have used many of these packages and like some of their features. However, most often I go back to using 'base R' so that I have more control. In a follow-up lab we will learn more about ggplot, which is arguably the most popular graphics package in R.
+
+**None of the default graphs that R produces are suitable as an end product. You will have use extra lines of code to manipulate them. In this class, we expect you to produce publication-ready images for your lab projects. These publication-ready figures should follow the principles of data visualization we discussed in the lecture.**
+
+Why should you make plots in R when they require a lot of special code? *BECAUSE*, you can create a single reproducible workflow from raw data to analysis and results all in one program. This makes the scientific process more transparent.
+
+# Outline:
+
+0.  A review of importing data, subsetting, and summarizing data.
+1.  Plotting amounts: barplots
+2.  Plotting distributions: boxplots, histograms, strip plots, and density plots
+3.  Plotting 2 characteristics: scatterplots
+4.  Plotting 3 characteristics simultaneously: Contour plots and heatmaps
+5.  Output to .pdf for publication
+
+# 0. Review from the first two weeks
+
+Here is a quick review.
+
+## About how R works
+
+Tasks in R are not completed until they are written into the **console** (the blue text). You can always write out code in a **script**, but nothing from the script is processed until moved to the console. R is an object oriented language, which means you assign calculations, data frames, vectors, and many other things to names, which can be recalled. Those objects that have been declared in your R session are available to be seen in the **environment**.
+
+To efficiently move lines of a script to the console, press
+
+-   Cmd+ Return on a Mac
+
+-   Cntrl+Enter on a PC
+
+## Creating a Reproducible Script
+
+Scripts are most valuable because they contain a complete list of code actions that can be repeated to perform an analysis and produce a data analysis product (e.g., a figure or statistical test output). This is also helpful in providing context for the logic of the analysis and the complete set of directions that go from raw data to inference.
+
+A best step to ensure a 'clean slate' is to begin each script with the code `rm(list = ls())`, which clears the environment of any prior objects you have declared. Once you have cleared and re-run your entire analysis, there is a complete record of your analysis and therefore no 'hidden' steps in the analysis.
+
+## Uploading Data
+
+Data should be entered into a spreadsheet and then converted into either a .csv file (comma separated file) or a plain text file, noting the form of separation between the column entries. Saving data using a .csv file is almost always the easiest approach. Data then can be uploaded using either the function `read.csv()` or `read.table()`. If you want a refresher on how these work, type `?read.table` into the console.
+
+The data required for this week's lab can be found in the Week 3 lab assignment of Canvas. Just like last week, create a folder within your BIO 380 folder on your computer called "Wk 3". Download the data and save it in your Wk 3 folder. To make this workable into the directory where you will store your files and set the working directory using the `setwd()` command.
+
+Here is an example of my working directory.
+
+```{r, eval=FALSE}
+# this is my working directory - set yours according to the correct path on your computer
+  setwd("/Users/nicholaskortessis/Library/CloudStorage/GoogleDrive-kortessn@wfu.edu/My Drive/Import/Wake Forest/Teaching/24-25/2025 - Spring/BIO 380/Lab/Wk3")
+```
+
+Let's use an example with a public health dataset. The CDC regularly provides data on myriad diseases of public health concern. I picked out the most recently updated data on diseases that are caused by waterborne pathogens and enteric pathogens (i.e., microbes that typically live in the gut). These are diseases such as norovirus, *E. coli*, and salmonella infections that we worry about with food and contact with infected water. You can read about the dataset [here](https://data.cdc.gov/Foodborne-Waterborne-and-Related-Diseases/NORS/5xkq-dg7x/about_data).
+
+It is labelled as `NORS_20250128.csv` on the Canvas page. Let's load it up and take a look.
+
+```{r}
+NORS.df <- read.csv(file = 'NORS_20250128.csv')
+```
+
+Let's take a look at some of the properties of the data frame. First, let's look at the characteristics it has.
+
+```{r}
+str(NORS.df)
+```
+
+We can see that each observation has date and location information (at least the state) and has information about the pathogen (etiology means the cause of a disease). It also has information on illnesses, hospitilizations, and deaths. There's other stuff, but it's not obvious what these measure about the individuals (but the metadata on the CDC website has that information, as it should!).
+
+#### **Checkpoint 1: Do you have questions about loading data? Looking at the data frame, what is a statistical individual in this case? Stated differently, what is the CDC's unit of sampling?** 
+
+This is our first BIG dataset. This dataset has 19 characteristics per individual (i.e., 19 columns) and the summary says the dataset has almost 67,000 individuals. Whoa. Good thing we have R, it is well suited for handling all that information.
+
+To see what is going on, let's first get a handle on the time part. Let's see what times are in the dataset.
+
+```{r}
+unique(NORS.df$Year)
+```
+
+The function `unique()` gives us all the different kinds of `Year` values in the data set. Turns out this data has reports on enteric and waterborne illnesses every year going back to 1972. That's 53 years of data!
+
+Let's also look to see what `Illnesses` looks like. Above, it says `Illnesses` is an integer. If you haven't figured it out by now, each *individual* in this dataset is an food or water-borne illness. For example, a norovirus outbreak. This outbreak happens at a particular location at a particular time, and causes some number of illness, with some number of deaths. Moreover, the illness can be categorized by the pathogen that caused it. So we could look at the, for example, the size, number, and severity of these outbreaks over time and across different states.
+
+## Subsetting dataframes
+
+To get a handle on this data. Let's start with an example where we want to know how many foodborne and waterborne deaths there were in 2022. To do this, we need to remember how to subset. Here is an example.
+
+```{r}
+NORS.2022.df <- subset(NORS.df, subset = (Year == 2022), select = c("Illnesses"))
+```
+
+To get a visual, let's plot a histogram
+
+```{r}
+hist(NORS.2022.df$Illnesses)
+```
+
+In 2022, most outbreaks were small, with fewer than 100 people getting sick in any one outbreak. But some were quite large. Some summary statistics of this can be found by using the `summary()` function.
+
+```{r}
+summary(NORS.2022.df$Illnesses)
+```
+
+Here, you can see that half of all outbreaks in 2022 affected 13 people or fewer. And 75% of outbreaks affected 26 people or fewer. The largest outbreak that year affected 322 people. We can ask what the pathogen was that caused the big outbreak in 2022.
+
+```{r}
+subset(NORS.df, subset = (Year == 2022 & Illnesses == 322))
+```
+
+This actually shows two outbreaks with 322 individuals in 2022. Scanning through the data, we can find a few pieces of information.
+
+```{r}
+subset(NORS.df, 
+       subset = (Year == 2022 & Illnesses == 322), 
+       select = c('Deaths', 'Etiology', 'Animal.Type', 'Food.Vehicle'))
+```
+
+One was caused by Salmonella and the other was caused by norovirus. The Salmonella outbreak was caused by poultry (presumably in raw chicken) and caused one death while the norovirus outbreaks was caused by people eating infected oysters.
+
+#### **Checkpoint 2: Use the `subset()` function (or any other suitable function to answer the following questions.**
+
+1.  How big was the largest outbreak (in terms of number of illnesses) in 2023?
+
+2.  What was the median outbreak size in 1977?
+
+3.  Where there any outbreaks that were larger than 10000 in the data set? If so, when and where did they occur, and what caused it?
+
+```{r, echo = FALSE, eval = FALSE}
+
+#1. 
+max(subset(NORS.df, subset = (Year == 2023), select = "Illnesses"))
+
+#2
+summary(subset(NORS.df, subset = (Year == 1977), select = "Illnesses"))
+
+#3
+NORS.df[NORS.df$Illnesses>10000,c("Year","Month","State","Etiology")]
+```
+
+# 1. Plotting amounts
+
+One thing we might want to do is to plot how much there is of something. For example, we could want to plot how much sickness was caused by diseases each year. A typical approach is to use *barplots* to visualize amounts. But before doing that, let's think for a second. Would you ever dream of being able to make a barplot with *this data* in excel? Remember, this dataset has almost *67,000* rows of data!
+
+To make a barplot, we simply need the function `barplot()`. Easy enough. Let's begin with something simple. Say we want to plot how many outbreaks there are in each state. We could subset data across all states, but R has an easier way to do this to determine counts of something. The function is `table`. Let's count how many outbreaks there are in each state in the dataset.
+
+```{r}
+(NORS.state.outbreaks <- table(NORS.df$State))
+barplot(NORS.state.outbreaks)
+```
+
+Before going any further, let's think about what this shows and whether there are ways to improve it. The first thing to note is that we need axis labels. To do that, we can use the arguments `xlab` and `ylab` like this
+
+```{r}
+barplot(NORS.state.outbreaks, xlab = 'State', ylab = 'Outbreaks')
+```
+
+This data has a lot of categories (50 states + some territories. We will never be able to write their names side by side. This is a good time to flip the barplot on its side and make it a *horizontal bar plot*.
+
+```{r}
+barplot(NORS.state.outbreaks, horiz = TRUE, 
+        xlab = 'Outbreaks', ylab = 'State')
+```
+
+Let's turn the names on their side so they are easier to read.
+
+```{r}
+barplot(NORS.state.outbreaks, horiz = TRUE, # make the plot horizontal
+        xlab = 'Outbreaks', ylab = 'State', # add axes
+        las = 1) # make the labels horizontal
+```
+
+A reasonable reason to make this plot is to see which states have the most outbreaks and which have the fewest. But the categories here (states) are listed in alphabetical order. That's not related to the main question. Instead, let's order them from largest to smallest. To do this, we need to first reorder the dataset.
+
+```{r}
+NORS.outbreak.ordered <- NORS.state.outbreaks[order(NORS.state.outbreaks, 
+                                                    decreasing = FALSE)]
+
+barplot(NORS.outbreak.ordered, horiz = TRUE, #Plot the ordered data as a horizontal barplot
+        xlab = 'Outbreaks', ylab = 'State', # Add axis labels
+        las = 1) # Rotate the axis labels so they are all horizontal
+```
+
+That's much better. But there are still a few issues. For one, the state labels are too big and are running of the figure. We can fix this by making the labels areas bigger or by making the text smaller. Here, we will do a bit of both. To make the plotting areas bigger, we need the `par` function with the argument `mar =` which sets the margins of the figure. The default is `mar = c(5,4,4,2).` These are the four numbers corresponding to the space on the c('bottom', 'left', 'top', and 'bottom'). We need to make quite a bit more space, so let's make the 'left' a lot bigger. We will change 4 to 15.
+
+```{r}
+par(mar = c(5,15,4,2))
+barplot(NORS.outbreak.ordered, horiz = TRUE, #Plot the ordered data as a horizontal barplot
+        xlab = 'Outbreaks', ylab = 'State', # Add axis labels
+        las = 1) # Rotate the axis labels so they are all horizontal
+```
+
+#### **Checkpoint 3: How would the plot change if we wrote `par(mar = c(15,5,4,2)` instead?**
+
+Last couple of things. The y-axis is causing us problems. Let's make a title that has the same information. And we will add a note at the bottom saying where the data come from.
+
+```{r}
+par(mar = c(5,15,4,2))
+barplot(NORS.outbreak.ordered, horiz = TRUE, #Plot the ordered data as a horizontal barplot
+        xlab = 'Outbreaks', ylab = '', # Add axis labels
+        las = 1, # Rotate the axis labels so they are all horizontal
+        main = 'Enteric Diseases Across US Territories, 1971-2023', # add title
+        sub = 'Data Source: CDC') # add a sub title at the bottom of the figure
+```
+
+There's a lot more we could do here, but that's enough for now. This figure looks quite good and would be acceptable for the public and also for a scientific publication.
+
+#### **Checkpoint 4: Make a barplot illustrating the number of outbreaks across states in 2023, the most recent year of the data. Make sure your script can reproduce this figure. You will receive credit for the appropriate figure, so make sure it has a title, axis labels where appropriate, and is interpretable by a scientist.**
+
+# 2. Plotting distributions
+
+There are other questions we could ask about this dataset related to multiple observations within a single category. For example, we might be interested in how big outbreaks are. To answer that, we might want to see the distribution of the number of individuals infected in every outbreak in the dataset. This is in essence making a frequency distribution. We want to see how bad these outbreaks have been in the dataset and how common each is. We can do this using *boxplots*, *histograms*, *strip plots,* and *density plots*. Let's look at each.
+
+To get this question of outbreak size, let's use the number of individuals infected and ill in each outbreak. This data shows up in the "Illnesses" column of the data.
+
+```{r}
+head(NORS.df$Illnesses)
+```
+
+Woof. There are a bunch (66,713). Visualizations are super helpful in this case.
+
+First, a boxplot.
+
+```{r}
+boxplot(NORS.df$Illnesses,
+        ylab = 'Number Infected',
+        main= 'Enteric Disease Infections per Outbreak')
+```
+
+Well. That's a boxplot, but it doesn't look to helpful. Let's try the something else. How about a histogram?
+
+```{r}
+hist(NORS.df$Illnesses,
+        xlab = 'Number Infected',
+        main= 'Enteric Disease Infections per Outbreak')
+```
+
+Hmm. Also not super helpful. Let's try a strip plot. We will 'jitter' the points, which is to say that we move them a little bit so they are all not right on top of each other. Clearly we have a bunch of zeros. We don't want all those zeros in the same space, so we move them a bit to see each one.
+
+```{r}
+stripchart(NORS.df$Illnesses, # strip chart of illnesses
+           method = 'jitter', # move the points a little bit
+           xlab = 'Number Infected', # make x label
+           main= 'Enteric Disease Infections per Outbreak', # add title
+           pch = 19) # make filled circles
+```
+
+Hmm. That's better, but again, not super helpful. A bunch of data points are more or less obscured because they are all in the same space. Let's try the density plot approach.
+
+```{r}
+hosp.density <- density(NORS.df$Illnesses) # Estimate the density curve
+plot(hosp.density,                         # And make a plot of it
+     xlab = 'Number Infected',
+     main = 'Distribution of Outbreak Size')
+```
+
+This one isn't helpful either. The problem here is that there are many many many small outbreaks and a very small number of absolutely gargantuan outbreaks. One way to deal with this kind of issue is to put the data on a log scale. Let's try that.
+
+```{r}
+log.illnesses <- log10(NORS.df$Illnesses)
+par(mfcol = c(2,2)) # This makes a four panel figure with 2 columns and 2 rows
+
+boxplot(log.illnesses, # make boxplot
+        ylab = 'Number Infected (log 10 scale)', #add label
+        main= 'Enteric Disease Infections per Outbreak') # add title
+
+hist(log.illnesses, # make histogram
+        xlab = 'Number Infected (log 10 scale)', #x label
+        main= 'Enteric Disease Infections per Outbreak') #title
+
+stripchart(log.illnesses, # make stipchart
+           method = 'jitter', # add jitter
+           xlab = 'Number Infected (log 10 scale)', # xlabel
+           main= 'Enteric Disease Infections per Outbreak', #title
+           pch = 19) # make filled circles
+
+log.illness.density <- density(log.illnesses)
+
+plot(log.illness.density, #Plot density
+     xlab = 'Number Infected (log 10 scale)', #x label
+     main = 'Distribution of Outbreak Size') # title
+```
+
+This helped quite a bit. Now we see that most epidemics are less than $10^2$ = 100 (i.e., the base 10 logarithm of 100 is 2). There are only a few that are out near 4,5,6 (=1000; 10,000; 100,000) illnesses. Each plot shows us something a little bit different. Which one is appropriate might depend the exact features of the distribution that you want to show.
+
+#### Checkpoint 5: Which plot (or combination of plots) would you use to show that most epidemics are very small, but there are a few very, very big ones? Provide some justification for your answer.
+
+#### Checkpoint 6: Write code to create a figure of the distribution of outbreak sizes in the state of New York.
+
+```{r echo = FALSE, eval = FALSE}
+NY.data <- subset(NORS.df, subset=(State == "New York")) 
+stripchart(log10(NY.data$Illnesses), method = "jitter", 
+           xlab = 'Outbreak Size (Log 10 Illnesses)', 
+           main = 'Distribution of Enteric Outbreaks in NY',
+           pch = 19,
+           col = rgb(0,0,0, alpha = 0.05))
+hist(log10(NY.data$Illnesses), 
+     xlab = 'Outbreak Size (Log 10 Illnesses)', 
+     main = 'Distribution of Enteric Outbreaks in NY')
+```
+
+# 3. Plotting scatterplots
+
+Scatterplots, with or without lines are used for visualizing relationships between multiple numeric characters. Lines are helpful when there is a third feature that connects points together. This is often time. Scatterplots without lines are the basic plotting function in R, and so they are relatively easy to use and can be done with the function `plot`. You simply give the `plot` function a set of x values and a set paired y values and you are good to go.
+
+Let's give this a try by looking at the relationship between the size of an outbreak and the number of individuals that were hospitalized during the outbreak as part of their illness in the state of California.
+
+```{r}
+CA.NORS.df <- subset(NORS.df, subset = State == 'California')
+plot(CA.NORS.df$Illnesses, # x-values
+     CA.NORS.df$Hospitalizations, # y-values
+     xlab = 'Number Infected', ylab = 'Number Hospitalized',
+     main = 'California')
+```
+
+Each point in this figure represents a statistical individual -- an outbreak. Each outbreak has multiple characteristics. In this case, we know that each outbreak was located in California, and it' position along the x-axis tells us how many individuals were infected during the course of that outbreak, and the y-axis tells us how many individuals were admitted to the hospital during the course of that outbreak.
+
+#### Checkpoint 7: What does this graph tell you about the relationship between outbreak size and outbreak severity?
+
+Another kind of x-y scatterplot is one where the data points are ordered, such as when data points are linked over time. Such a graph is called a *time series* graph. These are very common in epidemiology. Let's take a look.
+
+Say we want to see how the size of outbreaks each year. To do this, we need to sum over the number of illnesses each year. This can be a challenge to do by hand. Instead, we can use a function called `aggregate`.
+
+The function `aggregate` works similarly to `tapply` that we learned last week, except that it has a more natural language to it. You write the variable you are interested in *as a function of other characteristics.* For our question of the total number of illnesses each year, we want to sum all the illnesses in each outbreak each year. We can do this with `aggregate` as follows.
+
+```{r}
+(yearly.illnesses <- aggregate(Illnesses~Year, data = NORS.df, FUN = sum))
+```
+
+The way to interpret this code is that we read `Illnesses~Year` as "let's look at how illnesses changes as a function of year" where the `~` symbol (typically found just to the left of the number 1 on your keyboard) reads "as a function of".
+
+Let's see how it looks when we plot it.
+
+```{r}
+plot(yearly.illnesses$Year, # x-values
+     yearly.illnesses$Illnesses) # y-values
+```
+
+Okay. That doesn't look interesting. Let's add the line to indicate it is a time series. To do this, the `plot` function in R has an argument for the *type* of scatterplot, where you can indicate `'l'` for line `'p'` for points, and `'b'` for both. We want both. So we will write `typ = 'b'` in the arguments for the plot. Let's also add axis labels and a title.
+
+```{r}
+plot(yearly.illnesses$Year, # x-values
+     yearly.illnesses$Illnesses, # y-values
+     typ = 'b', # make the plot type include both points and lines
+     xlab = 'Year', # add x label
+     ylab = 'Illnesses', # add y label
+     main = 'Enteric Infections per Year in US') # add title
+```
+
+We can modify other parts of the plot to make it easier to see. I like the points to filled in. We can do that with the `pch` plotting parameter which gives different point shapes and fillings. I like `pch = 19`. We can also make the plots a bit smaller with the argument `cex`
+
+```{r}
+plot(yearly.illnesses$Year, # x-values
+     yearly.illnesses$Illnesses, # y-values
+     typ = 'b', # make the plot type include both points and lines
+     xlab = 'Year', # add x label
+     ylab = 'Illnesses', # add y label
+     main = 'Enteric Infections per Year in US', # add title
+     cex = 0.75, # Points 90% of their default size
+     pch = 19) # Filled circles
+```
+
+Something clearly happened in 1993. It says that 40,000 people got sick from food-borne or water-borne illnesses that year. I wonder what happened. Let's see.
+
+```{r}
+NORS.df[which(NORS.df$Illnesses == max(NORS.df$Illnesses)), ]
+```
+
+Hmm. It says there was a *Cryptosporidium parvum* outbreak in Wisconsin that sickened 403,000 people and killed 50 people. A quick google search shows that this indeed happened. The city of Milwaukee's water treatment plant had bad filtration and about a quarter of the 1.6 million residents got sick.
+
+What about the size of the average outbreak over time? Another time when we can use `aggregate`.
+
+```{r}
+(mean.outbreak.size <- aggregate(Illnesses~Year, NORS.df, mean))
+
+plot(mean.outbreak.size)
+```
+
+Hmm. That one outbreak in 1993 dominates everything. Here is a good use for the median.
+
+```{r}
+(median.outbreak.size <- aggregate(Illnesses~Year, NORS.df, median))
+
+plot(median.outbreak.size)
+```
+
+Let's make it look nicer.
+
+```{r}
+plot(median.outbreak.size,
+     typ = 'b', pch = 19,
+     xlab = 'Year', 
+     ylab = 'Median Outbreak Size',
+     main = 'Enteric Diseases in US')
+```
+
+#### Checkpoint 8: Make a plot of the median outbreak size in North Carolina over time.
+
+```{r echo = FALSE, eval = FALSE}
+(median.outbreak.size <- aggregate(Illnesses~Year, 
+                                   data =NORS.df, 
+                                   median, subset = (State == "North Carolina")))
+
+plot(median.outbreak.size, pch = 19,
+     typ = 'b', 
+     ylab = 'Median Outbreak Size',
+     main = 'Enteric Diseases in NC')
+```
+
+# 4. Plotting 3 characteristics: Heatmaps and Contour plots
+
+These are different types of plots that can be used to visualize 3 characteristics. These fall into categories of contour plots and heatmaps. The idea is that the x and y locations are the plot have information, but information is also encoded in color (for a heatmap) or encoded in a height, visualized with contours (the lines you see on topographical maps).
+
+It's easiest to illustrate contour plots and heatmaps with topographical data. We will use a built-in dataset from R: the Maunga Whau (Mt Eden) Volcano in Auckland, New Zealand.
+
+```{r, fig.show='hide'}
+# load the data
+  data(volcano)
+
+# the contour plot
+  contour(volcano)
+
+# the filled contour plot
+  filled.contour(volcano)
+
+# the basic heatmap
+  image(volcano)
+```
+
+The basic heatmap can be done with the function `image` in R, but it is not very ideal. A better function comes with the `fields` package. First, you have to install a package into R. Then, you have to tell R to load the library for that package. Once a package is installed, you don't need to install it again (unless you update R, which is why it is good to have a logical test in your code like the one I have below). However, you do need to load the library every time you want to use it.
+
+```{r, fig.show='hide'}
+# This line of code does a logical test to see you have have a package installed, and
+# if you don't, it installs it:
+  if (("fields" %in% installed.packages())==FALSE){
+    install.packages("fields", dependencies=TRUE)
+    }
+
+# load library
+  library(fields)
+# In Rstudio, if you click on "Global Environment" under the "Environment" tab, you can
+# see that the package "fields" is now loaded.
+
+# Notice that this function automatically plots a legend, and has a better color 
+# scheme:
+  image.plot(volcano)
+```
+
+For more ways to plot a volcano: <http://cran.r-project.org/web/packages/plot3D/vignettes/volcano.pdf>
+
+# 5. Saving Plots as Output to .pdf
+
+Wow I really like that volcano plot! I'd like to include it in my publication. It is easy to save pub-quality images in R, although sometimes you have to play around to get the size and margins right.
+
+To save an image in R, you have to open a "device" (in this case a .pdf), write the (several lines of) code to make the plot, and then close the device.
+
+```{r, eval=FALSE, fig.show='hide'}
+# let's read about the pdf function
+  ?pdf
+```
+
+```{r}
+# open the device using the pdf command
+  pdf(file = "MyVolcanoPlot.pdf", width = 7, height = 5)
+    image.plot(volcano) # in this case we only have one line of code
+  
+# close the device  
+  dev.off()
+```
+
+#### Checkpoint 9: Construct a good time series of the median enteric disease outbreak size in New York over time. Save the figure as a .pdf.
+
+```{=html}
+<!-------
+### Make your own maps in R
+
+Even though it is outdated, this is still a great post:
+
+http://www.molecularecologist.com/2012/09/making-maps-with-r/
+
+
+### Using R for spatial data and as a GIS
+
+R is an ideal platform for conducting spatial analyses and making maps. There are a *ton* of resources out there and spatial R really deserves a course of it's own. See the package 'sp' for an introduction to spatial analyses in R:
+
+'*sp*' - https://cran.r-project.org/web/packages/sp/sp.pdf
+
+However a newer package call 'sf' has replaced 'sp' and is really the cutting edge in R mapping and spatial analysis:
+
+'*sf*' - https://r-spatial.github.io/sf/
+
+And one of may all-time favorite R packages is the 'raster' package:
+
+'*raster*' - https://cran.r-project.org/web/packages/raster/index.html
+
+
+### A color blind palette that also looks good in black and white
+
+http://dr-k-lo.blogspot.com/2013/07/a-color-blind-friendly-palette-for-r.html
+
+cbbPalette <- c("#000000", "#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00", "#CC79A7", "#F0E442")
+
+### Kick the bar chart habit. Read the article that is now posted on Canvas
+
+http://www.nature.com/nmeth/journal/v11/n2/pdf/nmeth.2837.pdf
+
+### Violin plots can be useful 
+Violin plots: http://www.r-bloggers.com/split-violin-plots/
+
+Quigley et al. 2020: https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecy.3006/
+
+I highly recommend these papers (and the Nature "Points of Significance" articles in general) to those interested in moving away from bar charts in cases where they are not the best tool for the job.
+
+http://www.nature.com/nmeth/journal/v11/n2/pdf/nmeth.2813.pdf
+
+http://www.nature.com/nmeth/journal/v11/n2/pdf/nmeth.2807.pdf
+
+
+# Trellis graphs
+library(lattice)
+histogram(~longevity.days, data=df.f)
+histogram(~longevity.days | treatment, data=df.f)
+histogram(~longevity.days | treatment, data=df.f, layout=c(1,5))
+
+xyplot(longevity.days ~ thorax.mm | treatment, data=df.f, aspect=.7, pch=16)
+-------->
+```

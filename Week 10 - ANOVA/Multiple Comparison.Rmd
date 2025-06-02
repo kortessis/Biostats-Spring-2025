@@ -1,0 +1,23 @@
+---
+title: "Dealing with Multiple Comparisons"
+author: "Nicholas Kortessis"
+date: "2025-03-31"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Multiple Comparisons
+
+Assume no difference between groups
+
+```{r}
+mu <- 0
+sd <- 1
+n <- 100
+
+set.seed(1)
+
+```

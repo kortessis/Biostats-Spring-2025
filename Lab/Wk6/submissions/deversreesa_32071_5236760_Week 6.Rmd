@@ -1,0 +1,360 @@
+---
+title: "Week 6"
+author: "Reesa Devers"
+date: "2025-02-19"
+output: html_document
+---
+
+```{r}
+setwd("/Users/reesadevers/Desktop/BIOSTAT/")
+cod.df <- read.csv(file= "Cod.csv")
+vec <- c("Reesa's", "BIO 380", "Lab")
+
+my.vec <- seq(from = 10, to = 300, length = 5)
+
+another.vec <- rep(c("Success", "Failure"), times = c(30, 70))
+vec[2]
+my.vec[3]
+another.vec[100]
+another.vec[50:60]
+vec[-2]
+vec[-c(2:3)]
+
+a.matrix <- matrix(data = LETTERS[1:20], ncol = 4, nrow = 5, byrow = T)
+a.matrix[2, 3]
+a.matrix[2, ]
+a.matrix[, 3]
+a.matrix[-3, c(3:4)]
+```
+
+```{r}
+str(cod.df)
+cod.df$Prevalence
+```
+
+```{r}
+cod.df[cod.df$Sex == 2, "Sex"] <- "Male"
+cod.df[cod.df$Sex == 1, "Sex"] <- "Female"
+cod.df[cod.df$Sex == 0, "Sex"] <- "Unknown"
+head(cod.df$Sex)
+```
+
+```{r}
+Male1.df <- subset(cod.df, subset = (Sex == "Male"))
+Male2.df <- cod.df[cod.df$Sex == "Male", ]
+identical(Male1.df, Male2.df)
+```
+```{r}
+clean.cod.df <-subset(cod.df, subset = (Sex != "Unknown"))
+str(clean.cod.df)
+
+dim(clean.cod.df)
+
+unique(clean.cod.df$Sex)
+
+table(clean.cod.df$Sex)
+
+table(clean.cod.df$Sex, clean.cod.df$Stage)
+
+aggregate(Length ~ Sex, data = clean.cod.df, sd)
+```
+
+#Checkpoint 1: clean.cod.df <-subset(cod.df, subset = (Sex != "Unknown"))
+
+```{r}
+table(cod.df$Sex)
+total <- 1254
+Female <- 574
+Male <- 598
+Unknown <- 82
+
+Female/total
+Male/total
+Unknown/total
+
+table(cod.df$Area)
+
+aggregate(Weight ~ Sex, data = cod.df, mean)
+
+parasite_table <- table(cod.df$Age,cod.df$Prevalence, cod.df$Sex)
+
+parasite_prevalence <- prop.table(parasite_table, margin = c(1,2))
+
+
+
+```
+```{r}
+
+parasites_table <- table(cod.df$Area,cod.df$Prevalence)
+
+parasite_prevalences <- prop.table(parasites_table, margin = c(1,2))
+
+
+```
+
+#Checkpoint 2: 
+#A.table(cod.df$Sex).   Number of fish = 1254
+
+#B.total <- 1254
+#Female <- 574
+#Male <- 598
+#Unknown <- 82
+#Female/total
+#Male/total
+#Unknown/total
+
+#C.table(cod.df$Area)   4 Areas Total
+
+#D.aggregate(Weight ~ Sex, data = clean.cod.df, mean)
+
+#E.Infection is more common in Males, code below:
+#parasite_table <- table(cod.df$Age,cod.df$Prevalence, cod.df$Sex)
+#parasite_prevalence <- prop.table(parasite_table, margin = c(1,2))
+
+#F. Infection more common in areas 3 and 4. Code below:
+#parasites_table <- table(cod.df$Area,cod.df$Prevalence)
+#parasite_prevalences <- prop.table(parasites_table, margin = c(1,2))
+
+
+```{r}
+barplot(table(cod.df$Sex), xlab = "Sex", ylab = "Number of Fish")
+mosaicplot(Sex ~ 1, data = cod.df, main = "Sex Distribution in Cod")
+barplot(table(cod.df$Sex), xlab = "Sex", ylab = "Number of Fish", col = "red")
+install.packages("viridisLite")
+
+library(viridisLite)
+```
+
+```{r}
+(our.colors <- mako(length(unique(cod.df$Sex)), begin = 0.25, end = 0.75))
+barplot(table(cod.df$Sex), xlab = "Sex", ylab = "Number of Fish", col = our.colors,
+main = "Sex Distribution of Norwegian Cod", cex.lab = 1.5)
+
+par(mfrow = c(2, 2))
+boxplot(cod.df$Weight)
+plot(density(cod.df$Weight, na.rm = TRUE))
+hist(cod.df$Weight)
+stripchart(cod.df$Weight, method = "jitter", pch = 19)
+
+par(mfrow = c(2, 2))
+boxplot(cod.df$Weight, horizontal = TRUE)
+plot(density(cod.df$Weight, na.rm = TRUE))
+hist(cod.df$Weight)
+stripchart(cod.df$Weight, method = "jitter", pch = 19, col = rgb(0, 0, 0, alpha = 0.05))
+
+summary(cod.df$Weight)
+
+
+```
+
+```{r}
+par(mfrow = c(1, 2))
+plot(cod.df$Area, cod.df$Weight, xlab = "Area", ylab = "Fish Weight", pch = 19, col = rgb(0,
+0, 0, alpha = 0.5), main = "Without Jitter")
+plot(jitter(cod.df$Area), cod.df$Weight, xlab = "Area", ylab = "Fish Weight", pch = 19,
+col = rgb(0, 0, 0, alpha = 0.05), main = "With Jitter")
+
+head(cod.df$Area)
+head(jitter(cod.df$Area))
+plot(cod.df$Length, cod.df$Weight, pch = 19, xlab = "Length", ylab = "Weight", col = rgb(0,
+0, 0, alpha = 0.15))
+my.colors <- viridis(2, begin = 0.3, end = 0.7, alpha = 0.25)
+male.df <- subset(cod.df, subset = (Sex == "Male"))
+female.df <- subset(cod.df, subset = (Sex == "Female"))
+plot(female.df$Length, female.df$Weight, pch = 19, cex = 1.5, xlab = 'Length', ylab = 'Weight', col = my.colors[1])
+points(male.df$Length, male.df$Weight, pch = 19, cex = 1.5, col = my.colors[2])
+legend('topleft', #position of legend
+legend = c("Females","Males"), col = my.colors, pch = 19, cex = 1.5, bty = 'n') 
+
+pdf(file = 'MyFishPlot.pdf')
+
+plot(female.df$Length, female.df$Weight,
+pch = 19, cex = 1.5, xlab = 'Length', ylab = 'Weight', col = my.colors[1])
+points(male.df$Length, male.df$Weight, pch = 19, cex = 1.5, col = my.colors[2])
+legend('topleft',
+legend = c("Females","Males"),  col = my.colors,pch = 19, cex = 1.5,  bty = 'n') 
+dev.off()
+```
+#Checkpoint 3:
+#barplot(table(cod.df$Sex, cod.df$Prevalence), xlab = "Prevalence", ylab = "Sex", col = our.colors, main = "Prevalence of disease in different Sex's of Cod", cex.lab = 1.5)
+
+```{r}
+barplot(table(cod.df$Sex, cod.df$Prevalence), xlab = "Prevalence", ylab = "Sex", col = our.colors, main = "Prevalence of disease in different Sex's of Cod", cex.lab = 1.5)
+
+malef.df <- subset(cod.df, subset = (Sex == "Male"))
+femalef.df <- subset(cod.df, subset = (Sex == "Female"))
+
+plot(femalef.df$Prevalence, femalef.df$Area,
+pch = 19, cex = 1.5,
+xlab = 'Prevalence', ylab = 'Area',
+col = "red")
+
+points(malef.df$Prevalence, malef.df$Area,
+pch = 19, cex = 1.5,
+col = "blue")
+
+plot(cod.df$Prevalence ~ cod.df$Area, pch = 19, xlab = "Area", ylab = "Prevalence", col = our.colors, main = "Prevalence of disease in different Sex's of Cod")
+
+```
+
+#Checkpoint 4:
+#plot(cod.df$Prevalence ~ cod.df$Area, pch = 19, xlab = "Area", ylab = "Prevalence", col = our.colors, main = "Prevalence of disease in different Sex's of Cod")
+
+```{r}
+plot(jitter(cod.df$Area), cod.df$Prevalence, xlab = "Area", ylab = "Prevalence", pch = 19, col = rgb(0, 0, 0, alpha = 0.05), main = "With Jitter")
+```
+
+
+
+#Checkpoint 5:plot(jitter(cod.df$Area), cod.df$Prevalence, xlab = "Area", ylab = "Prevalence", pch = 19, col = rgb(0, 0, 0, alpha = 0.05), main = "With Jitter")
+
+
+```{r}
+alphabet <- letters[1:26]
+sample(alphabet, size = 10, replace = T)
+sample(alphabet, size = 10, replace = F) 
+rbinom(5, size = 10, prob = 0.6)
+dbinom(4:7, size = 10, prob = 0.6)
+pbinom(4:7, size = 10, prob = 0.6)
+qbinom(c(0.5, 0.9), size = 10, prob = 0.6)
+sample.size <- 10
+prob.success <- 0.6
+possible.outcomes <- 0:sample.size
+probabilities <- dbinom(possible.outcomes, size = sample.size, prob = prob.success)
+par(mfcol = c(2, 2), mar = c(4, 4, 3, 1))
+plot(possible.outcomes, probabilities, xlab = "# Successes", ylab = "Probability", main = "Probability Distribution Function", pch = 19)
+cumulative.prob <- pbinom(possible.outcomes, size = sample.size, prob = prob.success)
+plot(possible.outcomes, cumulative.prob, xlab = "# Successes", ylab = "Cumulative Probability",main = "Cumulative Distribution Function", pch = 19)
+hist(rbinom(100, size = sample.size, prob = prob.success), xlab = "# Successes",
+main = "Random Sample")
+quantile.probs <- seq(from = 0, to = 1, length = 100)
+quantiles <- qbinom(quantile.probs, size = sample.size, prob = prob.success)
+plot(quantile.probs, quantiles, xlab = "Cumulative Probability", ylab = "Quantile", main = "Quantile Function", typ = "l")
+
+mu <- 10
+sigma <- 2
+n <- 30
+xbar.mu <- mu
+xbar.sd <- sigma/sqrt(n)
+
+pot.outcomes <- seq(from = 5, to = 15, length = 10000)
+sam.prob <- dnorm(pot.outcomes, mean = xbar.mu, sd = xbar.sd)
+sam.cumul.prob <- pnorm(pot.outcomes, mean = xbar.mu, sd = xbar.sd)
+par(mfcol = c(1, 2), cex.lab = 0.8, cex.axis = 0.8)
+plot(pot.outcomes, sam.prob, typ = "l", xlab = "Sample Outcome", ylab = "Probability",
+main = "Sampling Distribution")
+plot(pot.outcomes, sam.cumul.prob, typ = "l", xlab = "Sample Mean", ylab = "Cumulative Probability",
+main = "Sampling Distribution")
+```
+```{r}
+sample_size <- 5
+
+sample.df <- sample_size - 1  
+x <- seq(-5, 5, by = 0.01)
+y <- dt(x, df = sample.df) 
+
+plot(x, y, type = "l", xlab = "t", ylab = "Density", main = "t-distribution (df = 4)")
+
+lower_quantile <- qt(0.025, df = sample.df) 
+
+upper_quantile <- qt(0.975, df = sample.df)
+abline(v = lower_quantile, col = 'red', lty = 2)
+abline(v = upper_quantile, col = 'red', lty = 2)
+```
+
+#Checkpoint 6: sample_size <- 5
+#sample.df <- sample_size - 1  
+#x <- seq(-5, 5, by = 0.01)
+#y <- dt(x, df = sample.df) 
+#plot(x, y, type = "l", xlab = "t", ylab = "Density", main = "t-distribution")
+
+#lower_quantile <- qt(0.025, df = sample.df) 
+#upper_quantile <- qt(0.975, df = sample.df)
+#abline(v = lower_quantile, col = 'red', lty = 2)
+#abline(v = upper_quantile, col = 'red', lty = 2)
+
+
+```{r}
+sample_size <- 50
+
+sample.df <- sample_size - 1  
+x <- seq(-5, 5, by = 0.01)
+y <- dt(x, df = sample.df) 
+
+plot(x, y, type = "l", xlab = "t", ylab = "Density", main = "t-distribution")
+
+lower_quantile <- qt(0.025, df = sample.df) 
+
+upper_quantile <- qt(0.975, df = sample.df)
+abline(v = lower_quantile, col = 'red', lty = 2)
+abline(v = upper_quantile, col = 'red', lty = 2)
+```
+
+#Checkpoint 7:
+#sample_size <- 50
+#sample.df <- sample_size - 1  
+#x <- seq(-5, 5, by = 0.01)
+#y <- dt(x, df = sample.df) 
+#plot(x, y, type = "l", xlab = "t", ylab = "Density", main = "t-distribution")
+#lower_quantile <- qt(0.025, df = sample.df) 
+#upper_quantile <- qt(0.975, df = sample.df)
+#abline(v = lower_quantile, col = 'red', lty = 2)
+#abline(v = upper_quantile, col = 'red', lty = 2)
+
+```{r}
+n <- length(cod.df$Prevalence)
+num.infected <- sum(cod.df$Prevalence == 1)
+alpha <- 0.01
+conf.levels <- c(alpha/2, 1 - alpha/2)
+(conf.int <- qbinom(conf.levels, size = n, prob = num.infected/n))/n
+```
+#Checkpoint 8:n <- length(cod.df$Prevalence)
+#num.infected <- sum(cod.df$Prevalence == 1)
+#alpha <- 0.01
+#conf.levels <- c(alpha/2, 1 - alpha/2)
+#(conf.int <- qbinom(conf.levels, size = n, prob = num.infected/n))/n
+
+```{r}
+hist(cod.df$Length)
+mean.length <- mean(cod.df$Length, na.rm = T)
+n.length <- sum(!is.na(cod.df$Length))
+sd.length <- sd(cod.df$Length, na.rm = T)
+se.length <- sd.length/sqrt(n.length)
+n.length
+mean.length
+sd.length
+se.length
+```
+```{r}
+alpha <- 0.01
+conf.levels <- c(alpha/2, 1 - alpha/2)
+qt(conf.levels, df = n.length - 1)
+
+(fish.conf.int <- mean.length + qt(conf.levels, df = n.length - 1) * se.length)
+
+length.mdl <- lm(Length ~ 1, data = cod.df)
+confint(length.mdl, level = 0.99)
+```
+```{r}
+
+length.mdl <- lm(Length ~ 1, data = cod.df)
+confint(length.mdl, level = 0.95)
+```
+
+#Checkpoint 10:
+#length.mdl <- lm(Length ~ 1, data = cod.df)
+#confint(length.mdl, level = 0.95)
+
+
+
+```{r}
+
+```
+
+
+#Checkpoint 11:
+
+
+
+
+

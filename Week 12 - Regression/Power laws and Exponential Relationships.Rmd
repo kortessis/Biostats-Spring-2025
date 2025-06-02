@@ -1,0 +1,386 @@
+---
+title: "Fitting Power Laws and Exponential Relationships using Linear Regression"
+author: "Nicholas Kortessis"
+date: ""
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/nicholaskortessis/Library/CloudStorage/GoogleDrive-kortessn@wfu.edu/My Drive/Import/Wake Forest/Teaching/24-25/2025 - Spring/BIO 380/Week 12 - Regression")
+```
+
+## Introduction
+
+Many relationships in biology cannot be fit with straight lines. Lines that are not straight are known as **nonlinear**. Simple linear regression is not well suited for these kinds of problems. However, the tools of linear regression can be very helpful for fitting some classes of nonlinear curves that are commonly found in biology.
+
+We will talk about two such curves: **power laws and exponential relationships**
+
+Power laws have the following mathematical form
+
+$$
+Y = aX^b.
+$$
+
+The parameters here are $a$ and $b$. The parameter $a$ is the value of $Y$ when $X = 1$, and the parameter $b$ is a parameter that controls the shape of the relationship between $X$ and $Y$. Power laws are pretty flexible and include many common curves you may be familiar with. For example, when $b = 2$, the relationship between $X$ and $Y$ is quadratic. When $b = 1/2$, the relationship is that of a square root function.
+
+Exponential relationships have the following mathematical form
+
+$$
+Y = ae^{bX},
+$$
+
+where $a$ is a parameter giving the value of $Y$ when $X = 0$ and the parameter $b$ is a coefficient illustrating how much $Y$ changes with $X$. Larger values of $b$ indicate faster exponential relationships. Positive values of $b$ indicate positive relationships and negative values of $b$ indicate negative relationships. The special case of $b = 0$ indicates no relationship between $Y$ and $X$ because $Y= ae^{0X} = ae^{0}= a$.
+
+Below are some examples of power laws and exponential relationships.
+
+```{r echo = FALSE, fig.align = 'center', fig.dim = c(7,4)}
+vec <- seq(from = 1.1, to = 2, length = 2)
+b <- c(rev(1/vec), vec)
+a <- 1
+
+library(viridisLite)
+cols <- viridis(length(b), begin = 0.1, end = 0.9, alpha = 0.95)
+
+x <- seq(0, 10, length.out = 100)
+par(mfcol = c(1,2))
+plot(0,0, xlim = c(0, 10), ylim = c(-1, 10), type = 'n', 
+     xlab = 'X', ylab = 'Y', main = 'Power Law Examples')
+
+for (i in 1:length(b)) {
+  y <- a * x^b[i]
+  lines(x, y, type = 'l', col = cols[i], lwd = 2, 
+        xlab = 'X', ylab = 'Y')
+}
+abline(0, 1, lty = 2, col = 'black')
+# Exponential relationships
+b <- seq(from = -0.5, to = 0.5, length = 5)
+a <- 1
+
+plot(0,0, xlim = c(0, 10), ylim = c(-1, 10), type = 'n', 
+     xlab = 'X', ylab = 'Y', main = 'Exponential Examples')
+
+for (i in 1:length(b)){
+  y <- a * exp(b[i] * x)
+  lines(x, y, type = 'l', col = cols[i], lwd = 2, 
+        xlab = 'X', ylab = 'Y')
+}
+```
+
+These can come in many different shapes and most clearly are not straight lines. How are we supposed to fit such shapes?\
+
+## Transforming Data To Linear Form
+
+A key feature of these two relationships is that they are linear on a different scale. Let's see how this works.
+
+### Power Laws on the Log-Log scale
+
+For power laws, let's log-transform the $Y$ values. (Any logarithm will do. I will use the natural log, ln, which is most common in science. Log base 10 and log base 2 are other options that you can see in certain subfields. For example, genomics used log base 2 to represent 'fold change'. All work exactly the same as the math here.)
+
+Taking the log of the power analysis gives
+
+$$
+\underbrace{\ln Y}_{\text{new Y}} = \ln\{aX^b\} = \underbrace{\ln a}_{\text{intercept}}+ \underbrace{b}_{\text{slope}}\times \underbrace{\ln X}_{\text{new X}}
+$$
+
+What this says is that if we plot ln Y against ln X, power laws look like a straight line! The intercept of the straight line is equal to ln a and the slope of this line is equal to b. Log transforming X and Y on the examples above gives
+
+```{r echo = FALSE, fig.align = 'center', fig.dim = c(7,4)}
+vec <- seq(from = 1.1, to = 2, length = 2)
+b <- c(rev(1/vec), vec)
+a <- 1
+
+library(viridisLite)
+cols <- viridis(length(b), begin = 0.1, end = 0.9, alpha = 0.95)
+
+x <- seq(0, 10, length.out = 100)
+par(mfcol = c(1,2))
+plot(0,0, xlim = c(0, 10), ylim = c(-1, 10), type = 'n', 
+     xlab = 'X', ylab = 'Y', main = 'Power Law Examples')
+
+for (i in 1:length(b)) {
+  y <- a * x^b[i]
+  lines(x, y, type = 'l', col = cols[i], lwd = 2, 
+        xlab = 'X', ylab = 'Y')
+}
+abline(0, 1, lty = 2, col = 'black')
+plot(0,0, xlim = log(c(1/10, 10)), ylim = log(c(0.1, 10)), type = 'n', 
+     xlab = 'ln X', ylab = 'ln Y', main = 'Power Law on Log-log Scale')
+
+for (i in 1:length(b)) {
+  y <- a * x^b[i]
+  lines(log(x), log(y), type = 'l', col = cols[i], lwd = 2, 
+        xlab = 'X', ylab = 'Y')
+}
+abline(0,1, lty = 2, col = 'black')
+```
+
+You can see that the intercept for all cases is 0 and from the equation above, we know that the intercept is ln a, meaning that $\ln a = 0 \rightarrow a = 1$. The slopes of these lines also give the value of $b$ in the power law relationship.
+
+One thing that might help is putting the actual values of X and Y on the figure, like this.
+
+```{r, echo = FALSE, fig.align = 'center', fig.dim = c(7,4)}
+vec <- seq(from = 1.1, to = 2, length = 2)
+b <- c(rev(1/vec), vec)
+a <- 1
+
+library(viridisLite)
+cols <- viridis(length(b), begin = 0.1, end = 0.9, alpha = 0.95)
+
+x <- seq(0.0001, 100, length.out = 10000)
+par(mfcol = c(1,2))
+plot(0,0, xlim = c(0, 10), ylim = c(-1, 10), type = 'n', 
+     xlab = 'X', ylab = 'Y', main = 'Power Law Examples')
+
+for (i in 1:length(b)) {
+  y <- a * x^b[i]
+  lines(x, y, type = 'l', col = cols[i], lwd = 2, 
+        xlab = 'X', ylab = 'Y')
+}
+abline(0, 1, lty = 2, col = 'black')
+plot(0,0, xlim = log10(c(1/100, 100)), ylim = log10(c(0.01, 100)), type = 'n', 
+     xlab = 'X (log scale)', ylab = 'Y (log scale)', main = 'Power Law on Log-log Scale',
+     xaxt = 'n', yaxt = 'n')
+axis(1,at = -2:2, labels = 10^c(-2:2))
+axis(2,at = -2:2, labels = 10^c(-2:2))
+abline(h = log10(c(0.01*(1:10), 0.1*(1:10), 1:10, 10*(1:10))), lty = 3, col = 'gray')
+abline(v = log10(c(0.01*(1:10), 0.1*(1:10), 1:10, 10*(1:10))), lty = 3, col = 'gray')
+
+
+for (i in 1:length(b)) {
+  y <- a * x^b[i]
+  lines(log(x), log(y), type = 'l', col = cols[i], lwd = 2, 
+        xlab = 'X', ylab = 'Y')
+}
+abline(0,1, lty = 2, col = 'black')
+```
+
+### Exponential Relationships
+
+We can also find a scale at which exponential relationships look linear. Again, we take the natural log of the exponential relationship to find
+
+$$
+\underbrace{\ln Y}_{\text{new Y}} = \ln\{ae^{bX}\} = \underbrace{\ln a}_{\text{intercept}} + \underbrace{b}_{\text{slope}}X.
+$$
+
+This transformation shows that a plot of $\ln Y$ against $X$ is a straight line for exponential relationships. The slope of a straight line relationship gives the parameter $b$ and the intercept is the natural log of the parameter $a$.
+
+Here is the original figure of the exponential relationship but where the y-axis is plotted on the log scale.
+
+```{r echo = FALSE, fig.align = 'center', fig.dim = c(7,4)}
+x <- seq(from = 0, to = 10, length = 100)
+b <- seq(from = -0.5, to = 0.5, length = 5)
+a <- 1
+
+par(mfcol = c(1,2))
+plot(0,0, xlim = c(0, 10), ylim = c(-1, 10), type = 'n', 
+     xlab = 'X', ylab = 'Y', main = 'Exponential Examples')
+
+for (i in 1:length(b)){
+  y <- a * exp(b[i] * x)
+  lines(x, y, type = 'l', col = cols[i], lwd = 2, 
+        xlab = 'X', ylab = 'Y')
+}
+
+plot(0,0, xlim = c(0, 10), ylim = log(c(0.001, 10)), type = 'n', 
+     xlab = 'X', ylab = 'ln Y', main = 'Exponential Examples')
+
+for (i in 1:length(b)){
+  y <- a * exp(b[i] * x)
+  lines(x, log(y), type = 'l', col = cols[i], lwd = 2)
+}
+
+
+```
+
+You can see that that all the curves have an intercept at 0 and since the intercept is $\ln a$, then $\ln a = 0 \rightarrow a = 1$.
+
+### Identifying Power Laws and Exponential Relationships In Data
+
+If you want to know whether data fit a power law or an exponential relationship, you have an easy test.
+
+1.  Log transform the y values. If you get a straight line relationship between ln y and x, then you have a decent fit for an exponential relationship.
+2.  Log transform the y and x values. If you get a straight line relationship between ln x and ln y, then you have a decent fit for a power law relationship.
+
+## Power Law Example: Metabolic Scaling Analysis
+
+### Load and Prepare the Data
+
+We start by analyzing the metabolic scaling of reptiles. Metabolic scaling relationships often follow power laws, with good biological theory behind it. In fact, most body size relationships follow power laws, and the study of body scaling relationships is called [allometry](https://www.nature.com/scitable/knowledge/library/allometry-the-study-of-biological-scaling-13228439/).
+
+For the study of allometry, we often want to know whether one component of the body increases greater than proportional to body size or less than proportional to body size. For greater than proportional scaling, $b>1$ and the body size component makes up a larger proportion of body size for bigger individuals. Fiddler crab claws are larger on larger fiddler crabs, but they also make up a larger proportion of the body size of crabs.
+
+Human heads are also bigger for larger humans, but our heads make up a smaller proportion of our body size as we grow. This is an example where the scaling coefficient $b < 1$.
+
+Metabolic rate works the same way and there is decent theory to suggest many organisms follow a 3/4 exponent scaling law between body size and basal metabolic rate. Here is some data for many different reptile species, shown on the normal scale.
+
+```{r, echo = FALSE, fig.align = 'center', fig.dim = c(4,4)}
+# Load the dataset
+metab.df <- read.csv(file = 'Body_Size_Observations.csv')
+
+# Convert the 'class' column to a factor with specific levels
+metab.df$class <- factor(metab.df$class, levels = c('Reptilia', 'Mammalia', 'Aves'))
+
+# Subset the data to include only reptiles
+metab.subset.df <- subset(metab.df, subset = class == "Reptilia")
+
+# Load the viridisLite package
+library(viridisLite)
+
+# Generate a colormap with seven colors and select three
+cols <- viridis(7, alpha = 0.95)
+cols <- cols[c(2, 4, 6)]  # Select specific colors
+
+# Plot metabolic rate vs body mass
+plot(metab.subset.df$body.mass, metab.subset.df$metabolic.rate, 
+     col = cols[2], 
+     pch = 19, 
+     xlab = 'Body Mass', 
+     ylab = 'Metabolic Rate', 
+     main = 'Metabolic Scaling of Reptiles',
+     cex.axis = 1.2, cex.main = 1.3, cex.lab = 1.5)
+
+# Fit a linear model
+lin.mdl <- lm(metabolic.rate ~ body.mass, data = metab.subset.df)
+
+# Add the regression line
+abline(lin.mdl$coefficients, col = cols[2])
+```
+
+This looks like it might fit a linear regression but it has got the problem that the residuals are not constant for the line. Based on allometric arguments, let's look at the log-log scale.
+
+#### Log-Log Plot for Power Law Fitting
+
+A log-log transformation allows us to evaluate whether a power-law relationship might fit the data well. The best fit as well as the confidence interval and prediction interval are given in the figure below, as well as the summary of the model fit.
+
+```{r power_law_model_metabolic, echo = FALSE, fig.align = 'center', fig.dim = c(4,4)}
+# Plot log-transformed data
+plot(log10(metab.subset.df$body.mass), log10(metab.subset.df$metabolic.rate), 
+     typ = 'n',
+     col = cols[2], 
+     pch = 19, 
+     xlab = 'Body Mass (log10 scale)', 
+     ylab = 'Metabolic Rate (log10 scale)', 
+     main = 'Power Law Metabolic Scaling',
+     cex.axis = 1.2, cex.main = 1.3, cex.lab = 1.5)
+
+# Add gridlines
+abline(h = seq(from = -9, to = 9, by = 1), lty = 3, col = 'gray')
+abline(v = seq(from = -9, to = 9, by = 1), lty = 3, col = 'gray')
+
+# Fit a linear model to the log-log data
+pwr.mdl <- lm(log10(metabolic.rate) ~ log10(body.mass), data = metab.subset.df)
+
+# New data to fit
+new.data <- data.frame(body.mass = 
+                         seq(from = 0.0001, to = 100, length.out = 100))
+# Calculate confidence interval of the line
+cis <- predict.lm(pwr.mdl, newdata = new.data, interval = 'confidence')
+
+# Calculate prediction interval
+pis <- predict.lm(pwr.mdl, newdata = new.data, interval = 'prediction')
+
+# Add cis
+polygon(c(log10(new.data$body.mass), log10(rev(new.data$body.mass))), 
+        c(cis[,'lwr'], rev(cis[,'upr'])), 
+        col = adjustcolor(cols[2], alpha.f = 0.5), 
+        border = NA)
+# Add pis
+polygon(c(log10(new.data$body.mass), log10(rev(new.data$body.mass))), 
+        c(pis[,'lwr'], rev(pis[,'upr'])), 
+        col = adjustcolor(cols[2], alpha.f = 0.2), 
+        border = NA)
+
+lines(log10(new.data$body.mass), 
+      cis[,'fit'], 
+      col = cols[2], 
+      lwd = 2)
+# Add the regression line
+#abline(pwr.mdl$coefficients, col = cols[2])
+
+# Add the data points
+points(log10(metab.subset.df$body.mass), 
+       log10(metab.subset.df$metabolic.rate), 
+       col = cols[2], 
+       pch = 19)
+
+summary(pwr.mdl)
+```
+
+It seems to work pretty well. The residuals are much more evenly distributed around the line and seem to have equal variance regardless of the value of the predictors. The estimated slope here is 0.79 with a standard error of 0.033 meaning that the theoretical expectation of 3/4 slope is within the 95% confidence interval (shown below). Moreover, the intercept is estimated at -0.73, meaning that the basic metabolic rate with a body size of 1 $e^{-0.73} = 0.482$ and the confidence interval for the basal metabolic rate is between 0.435 and 0.534.
+
+```{r echo = FALSE}
+paste('b CI = ',confint(pwr.mdl)[2,])
+paste('a CI = ', exp(confint(pwr.mdl)[1,]))
+```
+
+------------------------------------------------------------------------
+
+## Exponential Growth Analysis
+
+Exponential relationships are very common in population growth data because populations reproduce multiplicatively. If each individual in a population has two offspring over some time period, the population doubles each time period. That is multiplicative growth as opposed to additive growth. Populations that grow additively add the same number of individuals over time. Other examples of exponential growth include the spread of disease, the spread of cancer, and the growth of investments.
+
+Here, we will use a dataset of bacterial growth over time. The data are from a study of the growth of a bacterium called *Klebsiella pneumoniae* in a laboratory setting. Let's take a look on the normal and log scales.
+
+```{r load_growth_data, echo = FALSE, fig.align = 'center', fig.dim = c(7,4)}
+
+# Load the dataset
+growth.df <- read.csv(file = 'KHKgrowthcurves_LB.csv')
+
+# Filter time points between 1.5 and 7 hours
+indx <- growth.df$time..h. <= 7 & growth.df$time..h. >= 1.5
+
+par(mfcol = c(1,2))
+# Plot bacterial density over time
+plot(growth.df$time..h.[indx], growth.df$No.36.1[indx],
+     pch = 21, bg = 'gray', 
+     xlab = 'Time (hr)', 
+     ylab = 'Bacterial Density', 
+     typ = 'b')
+
+# Plot log-transformed bacterial density
+plot(growth.df$time..h.[indx], log(growth.df$No.36.1[indx]),
+     pch = 21, bg = 'gray', 
+     xlab = 'Time (hr)', 
+     ylab = 'ln Bacterial Density', 
+     typ = 'b')
+```
+
+The line on the left panel surely looks like exponential growth and the panel on the right more or less confirms that it is because we get a mostly straight line between ln bacterial density and time. This is a plot of log transformed y against x, and a straight line on that scale indicates exponential growth.
+
+Let's see how fast the population grows by fitting a linear model.
+
+#### Fit and Visualize the Exponential Model
+
+Using linear regression, we fit an exponential growth model and add confidence intervals to the plot.
+
+```{r echo = FALSE, fig.align = 'center', fig.dim = c(4,4)}
+# Plot log-transformed bacterial density
+plot(growth.df$time..h.[indx], log(growth.df$No.36.1[indx]),
+     pch = 21, bg = 'gray', 
+     xlab = 'Time (hr)', 
+     ylab = 'ln Bacterial Density')
+# Fit a linear model
+mdl <- lm(log(No.36.1) ~ time..h., data = growth.df, 
+          subset = (time..h. <= 7 & time..h. >= 1.5))
+
+# Calculate confidence intervals
+cis <- predict.lm(mdl, interval = 'confidence')
+
+# Add fitted line and confidence intervals
+polygon(c(growth.df$time..h.[indx], rev(growth.df$time..h.[indx])), 
+        c(cis[,'lwr'], rev(cis[,'upr'])), 
+        col = adjustcolor('blue', alpha.f = 0.2), 
+        border = NA)
+lines(growth.df$time..h.[indx], cis[,'fit'], typ = 'l', col = 'blue')  # Fitted line
+
+summary(mdl)
+```
+
+The exponential growth rate estimated by this model is given by the slope, which is estimated to be 1.16 per hour, meaning the population doubles every 0.59 hours (or about 36 minutes). In evolutionary biology, this is called *Malthusian fitness*. The 95% confidence interval for the growth rate is between 1.08 and 1.24 per hour (33.6 - 38.3 minutes).
+
+## Conclusion
+
+This document demonstrated how to fit power laws and exponential growth models using linear regression. These techniques are powerful tools for analyzing relationships in biological and ecological data.
